@@ -85,7 +85,6 @@ static volatile uint8_t msg_next_out, msg_next_in;
 #define NUM_MSG 2
 static char msg[NUM_MSG][40];
 
-static void heartbeat_blink(void);
 static void ring_blink(void);
 
 /*
@@ -126,12 +125,6 @@ show_debug_messages(void)
 	}
 }
 
-static void
-heartbeat_blink(void)
-{
-	static bool heartbeat = false;
-	LED_BLUE(heartbeat = !heartbeat);
-}
 
 static void
 ring_blink(void)
@@ -255,6 +248,8 @@ user_start(int argc, char *argv[])
 	/* print some startup info */
 	lowsyslog("\nPX4IO: starting\n");
 
+	stm32_unconfiggpio(GPIO_LED1);
+	stm32_configgpio(GPIO_LED1);
 	/* default all the LEDs to off while we start */
 	LED_AMBER(false);
 	LED_BLUE(false);
@@ -325,11 +320,11 @@ user_start(int argc, char *argv[])
 
 			if (phase) {
 				LED_AMBER(true);
-				LED_BLUE(false);
+				//LED_BLUE(false);
 
 			} else {
 				LED_AMBER(false);
-				LED_BLUE(true);
+				//LED_BLUE(true);
 			}
 
 			up_udelay(250000);
@@ -346,7 +341,6 @@ user_start(int argc, char *argv[])
 	 */
 
 	uint64_t last_debug_time = 0;
-	uint64_t last_heartbeat_time = 0;
 
 	for (;;) {
 
@@ -362,22 +356,6 @@ user_start(int argc, char *argv[])
 		perf_begin(controls_perf);
 		controls_tick();
 		perf_end(controls_perf);
-
-		/*
-		  blink blue LED at 4Hz in normal operation. When in
-		  override blink 4x faster so the user can clearly see
-		  that override is happening. This helps when
-		  pre-flight testing the override system
-		 */
-                uint32_t heartbeat_period_us = 250*1000UL;
-                if (r_status_flags & PX4IO_P_STATUS_FLAGS_OVERRIDE) {
-			heartbeat_period_us /= 4;
-                }
-
-                if ((hrt_absolute_time() - last_heartbeat_time) > heartbeat_period_us) {
-                    last_heartbeat_time = hrt_absolute_time();
-                    heartbeat_blink();
-                }
 
 		ring_blink();
 

@@ -105,6 +105,7 @@
 #define PX4IO_INAIR_RESTART_ENABLE	_IOC(0xff00, 1)
 #define PX4IO_REBOOT_BOOTLOADER		_IOC(0xff00, 2)
 #define PX4IO_CHECK_CRC			_IOC(0xff00, 3)
+#define PX4IO_SET_HEATER_STATE		_IOC(0xff00, 4)
 
 #define UPDATE_INTERVAL_MIN		2			// 2 ms	-> 500 Hz
 #define ORB_CHECK_INTERVAL		200000		// 200 ms -> 5 Hz
@@ -2851,6 +2852,10 @@ PX4IO::ioctl(file * filep, int cmd, unsigned long arg)
 	case PWM_SERVO_CLEAR_OVERRIDE_OK:
 		/* clear the 'OVERRIDE OK' bit */
 		ret = io_reg_modify(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_ARMING, PX4IO_P_SETUP_ARMING_MANUAL_OVERRIDE_OK, 0);
+		break;
+
+	case PX4IO_SET_HEATER_STATE:
+		ret = io_reg_set(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_HEATER, arg);
 		break;
 
 	default:

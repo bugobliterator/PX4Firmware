@@ -238,6 +238,7 @@ enum {							/* DSM bind states */
 #define PX4IO_P_SETUP_TRIM_ROLL			16	/**< Roll trim, in actuator units */
 #define PX4IO_P_SETUP_TRIM_PITCH		17	/**< Pitch trim, in actuator units */
 #define PX4IO_P_SETUP_TRIM_YAW			18	/**< Yaw trim, in actuator units */
+#define PX4IO_P_SETUP_HEATER			19
 
 /* autopilot control values, -10000..10000 */
 #define PX4IO_PAGE_CONTROLS			51	/**< actuator control groups, one after the other, 8 wide */
