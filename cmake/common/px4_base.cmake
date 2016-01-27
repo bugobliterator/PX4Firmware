@@ -276,7 +276,7 @@ function(px4_add_module)
 	endif()
 
 	if(INCLUDES)
-		target_include_directories(${MODULE} ${INCLUDES})
+		target_include_directories(${MODULE} PRIVATE ${INCLUDES})
 	endif()
 
 	if(DEPENDS)
