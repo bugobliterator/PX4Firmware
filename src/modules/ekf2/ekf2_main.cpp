@@ -75,7 +75,7 @@
 #include <uORB/topics/estimator_status.h>
 #include <uORB/topics/ekf2_innovations.h>
 
-#include <ecl/EKF/ekf.h>
+#include <ecl/EKF/ekf_frontend.h>
 
 
 extern "C" __EXPORT int ekf2_main(int argc, char *argv[]);
@@ -128,7 +128,7 @@ private:
 	int		_gps_sub = -1;
 	int		_airspeed_sub = -1;
 	int		_params_sub = -1;
-
+	int8_t _ekf_id;
 	orb_advert_t _att_pub;
 	orb_advert_t _lpos_pub;
 	orb_advert_t _control_state_pub;
@@ -167,7 +167,7 @@ private:
 	control::BlockParamFloat *_mag_declination_deg;	// magnetic declination in degrees
 	control::BlockParamFloat *_heading_innov_gate;	// innovation gate for heading innovation test
 
-	EstimatorBase *_ekf;
+	Ekf *_ekf;
 
 	int update_subscriptions();
 
@@ -186,7 +186,7 @@ Ekf2::Ekf2():
 	_lp_yaw_rate(250.0f, 20.0f),
 	_ekf(new Ekf())
 {
-	parameters *params = _ekf->getParamHandle();
+	parameters *params = _ekf->instance(_ekf_id)->getParamHandle();
 	_mag_delay_ms = new control::BlockParamFloat(this, "EKF2_MAG_DELAY", false, &params->mag_delay_ms);
 	_baro_delay_ms = new control::BlockParamFloat(this, "EKF2_BARO_DELAY", false, &params->baro_delay_ms);
 	_gps_delay_ms = new control::BlockParamFloat(this, "EKF2_GPS_DELAY", false, &params->gps_delay_ms);
@@ -219,15 +219,15 @@ Ekf2::~Ekf2()
 
 void Ekf2::print()
 {
-	_ekf->printStoredGps();
-	_ekf->printStoredBaro();
-	_ekf->printStoredMag();
-	_ekf->printStoredIMU();
+	_ekf->instance(_ekf_id)->printStoredGps();
+	_ekf->instance(_ekf_id)->printStoredBaro();
+	_ekf->instance(_ekf_id)->printStoredMag();
+	_ekf->instance(_ekf_id)->printStoredIMU();
 }
 
 void Ekf2::print_status()
 {
-	warnx("position OK %s", (_ekf->position_is_valid()) ? "[YES]" : "[NO]");
+	warnx("position OK %s", (_ekf->instance(_ekf_id)->position_is_valid()) ? "[YES]" : "[NO]");
 }
 
 void Ekf2::task_main()
@@ -298,14 +298,14 @@ void Ekf2::task_main()
 
 		hrt_abstime now = hrt_absolute_time();
 		// push imu data into estimator
-		_ekf->setIMUData(now, sensors.gyro_integral_dt[0], sensors.accelerometer_integral_dt[0],
+		_ekf->instance(_ekf_id)->setIMUData(now, sensors.gyro_integral_dt[0], sensors.accelerometer_integral_dt[0],
 				 &sensors.gyro_integral_rad[0], &sensors.accelerometer_integral_m_s[0]);
 
 		// read mag data
-		_ekf->setMagData(sensors.magnetometer_timestamp[0], &sensors.magnetometer_ga[0]);
+		_ekf->instance(_ekf_id)->setMagData(sensors.magnetometer_timestamp[0], &sensors.magnetometer_ga[0]);
 
 		// read baro data
-		_ekf->setBaroData(sensors.baro_timestamp[0], &sensors.baro_alt_meter[0]);
+		_ekf->instance(_ekf_id)->setBaroData(sensors.baro_timestamp[0], &sensors.baro_alt_meter[0]);
 
 		// read gps data if available
 		if (gps_updated) {
@@ -324,22 +324,22 @@ void Ekf2::task_main()
 			gps_msg.vel_ned[2] = gps.vel_d_m_s;
 			gps_msg.vel_ned_valid = gps.vel_ned_valid;
 
-			_ekf->setGpsData(gps.timestamp_position, &gps_msg);
+			_ekf->instance(_ekf_id)->setGpsData(gps.timestamp_position, &gps_msg);
 		}
 
 		// read airspeed data if available
 		if (airspeed_updated) {
-			_ekf->setAirspeedData(airspeed.timestamp, &airspeed.indicated_airspeed_m_s);
+			_ekf->instance(_ekf_id)->setAirspeedData(airspeed.timestamp, &airspeed.indicated_airspeed_m_s);
 		}
 
 		// run the EKF update
-		_ekf->update();
+		_ekf->instance(_ekf_id)->update();
 
 		// generate vehicle attitude data
 		struct vehicle_attitude_s att = {};
 		att.timestamp = hrt_absolute_time();
 
-		_ekf->copy_quaternion(att.q);
+		_ekf->instance(_ekf_id)->copy_quaternion(att.q);
 		matrix::Quaternion<float> q(att.q[0], att.q[1], att.q[2], att.q[3]);
 		matrix::Euler<float> euler(q);
 		att.roll = euler(0);
@@ -354,32 +354,32 @@ void Ekf2::task_main()
 		lpos.timestamp = hrt_absolute_time();
 
 		// Position in local NED frame
-		_ekf->copy_position(pos);
+		_ekf->instance(_ekf_id)->copy_position(pos);
 		lpos.x = pos[0];
 		lpos.y = pos[1];
 		lpos.z = pos[2];
 
 		// Velocity in NED frame (m/s)
-		_ekf->copy_velocity(vel);
+		_ekf->instance(_ekf_id)->copy_velocity(vel);
 		lpos.vx = vel[0];
 		lpos.vy = vel[1];
 		lpos.vz = vel[2];
 
 		// TODO: better status reporting
-		lpos.xy_valid = _ekf->position_is_valid();
+		lpos.xy_valid = _ekf->instance(_ekf_id)->position_is_valid();
 		lpos.z_valid = true;
-		lpos.v_xy_valid = _ekf->position_is_valid();
+		lpos.v_xy_valid = _ekf->instance(_ekf_id)->position_is_valid();
 		lpos.v_z_valid = true;
 
 		// Position of local NED origin in GPS / WGS84 frame
-		lpos.ref_timestamp = _ekf->_last_gps_origin_time_us; // Time when reference position was set
+		lpos.ref_timestamp = _ekf->instance(_ekf_id)->_last_gps_origin_time_us; // Time when reference position was set
 		lpos.xy_global =
-			_ekf->position_is_valid();// true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
+			_ekf->instance(_ekf_id)->position_is_valid();// true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
 		lpos.z_global = true;// true if z is valid and has valid global reference (ref_alt)
-		lpos.ref_lat = _ekf->_posRef.lat_rad * 180.0 / M_PI; // Reference point latitude in degrees
-		lpos.ref_lon = _ekf->_posRef.lon_rad * 180.0 / M_PI; // Reference point longitude in degrees
+		lpos.ref_lat = _ekf->instance(_ekf_id)->_posRef.lat_rad * 180.0 / M_PI; // Reference point latitude in degrees
+		lpos.ref_lon = _ekf->instance(_ekf_id)->_posRef.lon_rad * 180.0 / M_PI; // Reference point longitude in degrees
 		lpos.ref_alt =
-			_ekf->_gps_alt_ref; // Reference altitude AMSL in meters, MUST be set to current (not at reference point!) ground level
+			_ekf->instance(_ekf_id)->_gps_alt_ref; // Reference altitude AMSL in meters, MUST be set to current (not at reference point!) ground level
 
 		// The rotation of the tangent plane vs. geographical north
 		lpos.yaw = 0.0f;
@@ -444,14 +444,14 @@ void Ekf2::task_main()
 		// generate and publish global position data
 		struct vehicle_global_position_s global_pos = {};
 
-		if (_ekf->position_is_valid()) {
+		if (_ekf->instance(_ekf_id)->position_is_valid()) {
 			// TODO: local origin is currenlty at GPS height origin - this is different to ekf_att_pos_estimator
 
 			global_pos.timestamp = hrt_absolute_time(); // Time of this estimate, in microseconds since system start
 			global_pos.time_utc_usec = gps.time_utc_usec; // GPS UTC timestamp in microseconds
 
 			double est_lat, est_lon;
-			map_projection_reproject(&_ekf->_posRef, lpos.x, lpos.y, &est_lat, &est_lon);
+			map_projection_reproject(&_ekf->instance(_ekf_id)->_posRef, lpos.x, lpos.y, &est_lat, &est_lon);
 			global_pos.lat = est_lat; // Latitude in degrees
 			global_pos.lon = est_lon; // Longitude in degrees
 
@@ -485,8 +485,8 @@ void Ekf2::task_main()
 		// publish estimator status
 		struct estimator_status_s status = {};
 		status.timestamp = hrt_absolute_time();
-		_ekf->get_state_delayed(status.states);
-		_ekf->get_covariances(status.covariances);
+		_ekf->instance(_ekf_id)->get_state_delayed(status.states);
+		_ekf->instance(_ekf_id)->get_covariances(status.covariances);
 
 		if (_estimator_status_pub == nullptr) {
 			_estimator_status_pub = orb_advertise(ORB_ID(estimator_status), &status);
@@ -498,13 +498,13 @@ void Ekf2::task_main()
 		// publish estimator innovation data
 		struct ekf2_innovations_s innovations = {};
 		innovations.timestamp = hrt_absolute_time();
-		_ekf->get_vel_pos_innov(&innovations.vel_pos_innov[0]);
-		_ekf->get_mag_innov(&innovations.mag_innov[0]);
-		_ekf->get_heading_innov(&innovations.heading_innov);
+		_ekf->instance(_ekf_id)->get_vel_pos_innov(&innovations.vel_pos_innov[0]);
+		_ekf->instance(_ekf_id)->get_mag_innov(&innovations.mag_innov[0]);
+		_ekf->instance(_ekf_id)->get_heading_innov(&innovations.heading_innov);
 
-		_ekf->get_vel_pos_innov_var(&innovations.vel_pos_innov_var[0]);
-		_ekf->get_mag_innov_var(&innovations.mag_innov_var[0]);
-		_ekf->get_heading_innov_var(&innovations.heading_innov_var);
+		_ekf->instance(_ekf_id)->get_vel_pos_innov_var(&innovations.vel_pos_innov_var[0]);
+		_ekf->instance(_ekf_id)->get_mag_innov_var(&innovations.mag_innov_var[0]);
+		_ekf->instance(_ekf_id)->get_heading_innov_var(&innovations.heading_innov_var);
 
 		if (_estimator_innovations_pub == nullptr) {
 			_estimator_innovations_pub = orb_advertise(ORB_ID(ekf2_innovations), &innovations);
@@ -527,7 +527,12 @@ void Ekf2::task_main_trampoline(int argc, char *argv[])
 int Ekf2::start()
 {
 	ASSERT(_control_task == -1);
-
+	//create ekf instance
+	_ekf_id = _ekf->create();
+	if (_ekf_id == -1) {
+		PX4_WARN("Failed to create ekf instance");
+		return -errno;
+	}
 	/* start the task */
 	_control_task = px4_task_spawn_cmd("ekf2",
 					   SCHED_DEFAULT,
