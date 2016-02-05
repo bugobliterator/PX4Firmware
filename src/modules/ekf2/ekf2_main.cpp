@@ -75,6 +75,8 @@
 #include <uORB/topics/estimator_status.h>
 #include <uORB/topics/ekf2_innovations.h>
 #include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/optical_flow.h>
+
 
 #include <ecl/EKF/ekf.h>
 
@@ -130,6 +132,7 @@ private:
 	int		_airspeed_sub = -1;
 	int		_params_sub = -1;
 	int		_control_mode_sub = -1;
+	int 	_optical_flow_sub = -1;
 
 	orb_advert_t _att_pub;
 	orb_advert_t _lpos_pub;
@@ -260,6 +263,7 @@ void Ekf2::task_main()
 	_airspeed_sub = orb_subscribe(ORB_ID(airspeed));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_control_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
+	_optical_flow_sub = orb_subscribe(ORB_ID(optical_flow));
 
 	px4_pollfd_struct_t fds[2] = {};
 	fds[0].fd = _sensors_sub;
@@ -302,10 +306,12 @@ void Ekf2::task_main()
 		bool gps_updated = false;
 		bool airspeed_updated = false;
 		bool control_mode_updated = false;
+		bool optical_flow_updated = false;
 
 		sensor_combined_s sensors = {};
 		airspeed_s airspeed = {};
 		vehicle_control_mode_s vehicle_control_mode = {};
+		optical_flow_s optical_flow = {};
 
 		orb_copy(ORB_ID(sensor_combined), _sensors_sub, &sensors);
 
@@ -322,6 +328,11 @@ void Ekf2::task_main()
 			orb_copy(ORB_ID(airspeed), _airspeed_sub, &airspeed);
 		}
 
+		orb_check(_optical_flow_sub, &optical_flow_updated);
+
+		if(optical_flow_updated) {
+			orb_copy(ORB_ID(optical_flow), _optical_flow_sub, &optical_flow);
+		}
 		// Use the control model data to determine if the motors are armed as a surrogate for an on-ground vs in-air status
 		// TODO implement a global vehicle on-ground/in-air check
 		orb_check(_control_mode_sub, &control_mode_updated);
@@ -371,6 +382,17 @@ void Ekf2::task_main()
 			_ekf->setAirspeedData(airspeed.timestamp, &airspeed.indicated_airspeed_m_s);
 		}
 
+		if(optical_flow_updated) {
+			Vector2f flowrate;
+			flowrate(0) = optical_flow.pixel_flow_x_integral;
+			flowrate(1) = optical_flow.pixel_flow_y_integral;
+			printf("flowrate: %f %f Height: %f\n", (double)optical_flow.pixel_flow_x_integral, (double)optical_flow.pixel_flow_y_integral, (double)optical_flow.ground_distance_m);
+			Vector2f bodyrate;
+			bodyrate(0) = optical_flow.gyro_x_rate_integral;
+			bodyrate(1) = optical_flow.gyro_y_rate_integral;
+			_ekf->setOpticalFlowData(optical_flow.timestamp, &flowrate, &bodyrate);
+			_ekf->setRangeData(optical_flow.timestamp, &optical_flow.ground_distance_m);
+		}
 		// run the EKF update
 		_ekf->update();
 

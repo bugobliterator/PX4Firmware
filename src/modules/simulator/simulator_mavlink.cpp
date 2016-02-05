@@ -44,7 +44,7 @@
 extern "C" __EXPORT hrt_abstime hrt_reset(void);
 
 #define SEND_INTERVAL 	20
-#define UDP_PORT 	14560
+#define UDP_PORT 	14520
 #define PIXHAWK_DEVICE "/dev/ttyACM0"
 
 #ifndef B460800

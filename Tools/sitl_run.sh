@@ -26,7 +26,7 @@ fi
 if [ "$model" == "" ] || [ "$model" == "none" ]
 then
 	echo "empty model, setting iris as default"
-	model="iris"
+	model="iris_opt_flow"
 fi
 
 if [ "$#" != 5 ]
