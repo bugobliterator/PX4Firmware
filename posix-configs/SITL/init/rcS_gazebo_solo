@@ -88,20 +88,20 @@ mc_pos_control start
 mc_att_control start
 mixer load /dev/pwm_output0 ../../../../ROMFS/px4fmu_common/mixers/solo.main.mix
 
-mavlink start -u 14556 -r 2000000 -o 14550
-mavlink stream -r 80 -s POSITION_TARGET_LOCAL_NED -u 14556
-mavlink stream -r 80 -s LOCAL_POSITION_NED -u 14556
-mavlink stream -r 80 -s GLOBAL_POSITION_INT -u 14556
-mavlink stream -r 80 -s ATTITUDE -u 14556
-mavlink stream -r 80 -s ATTITUDE_TARGET -u 14556
-mavlink stream -r 20 -s RC_CHANNELS -u 14556
-mavlink stream -r 250 -s HIGHRES_IMU -u 14556
+mavlink start -u 14556 -r 20000 -o 14550
+mavlink stream -r 25 -s POSITION_TARGET_LOCAL_NED -u 14556
+mavlink stream -r 25 -s LOCAL_POSITION_NED -u 14556
+mavlink stream -r 25 -s GLOBAL_POSITION_INT -u 14556
+mavlink stream -r 25 -s ATTITUDE -u 14556
+mavlink stream -r 25 -s ATTITUDE_TARGET -u 14556
+mavlink stream -r 25 -s RC_CHANNELS -u 14556
+mavlink stream -r 50 -s HIGHRES_IMU -u 14556
 mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u 14556
 
-mavlink start -u 14536 -r 1000000 -m osd -o 14530
+mavlink start -u 14536 -r 10000 -m osd -o 14530
 mavlink stream -r 10 -s EKF_STATUS_REPORT -u 14536
 
-mavlink start -u 14546 -r 1000000 -o 14540 -m osd
+mavlink start -u 14546 -r 10000 -o 14540 -m osd
 
 mavlink boot_complete
 sdlog2 start -r 100 -e -t -a
