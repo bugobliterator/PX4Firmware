@@ -203,7 +203,6 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		break;
 
 	case MAVLINK_MSG_ID_RC_CHANNELS:
-		//printf("Receiving RC!!\n");
 		handle_message_rc_channels(msg);
 		break;
 
@@ -434,7 +433,7 @@ MavlinkReceiver::handle_message_optical_flow_rad(mavlink_message_t *msg)
 	struct optical_flow_s f;
 	memset(&f, 0, sizeof(f));
 
-	f.timestamp = flow.time_usec;
+	f.timestamp = hrt_absolute_time();;
 	f.integration_timespan = flow.integration_time_us;
 	f.pixel_flow_x_integral = flow.integrated_x;
 	f.pixel_flow_y_integral = flow.integrated_y;

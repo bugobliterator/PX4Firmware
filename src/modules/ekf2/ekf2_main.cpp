@@ -386,12 +386,13 @@ void Ekf2::task_main()
 			Vector2f flowrate;
 			flowrate(0) = optical_flow.pixel_flow_x_integral;
 			flowrate(1) = optical_flow.pixel_flow_y_integral;
-			printf("flowrate: %f %f Height: %f\n", (double)optical_flow.pixel_flow_x_integral, (double)optical_flow.pixel_flow_y_integral, (double)optical_flow.ground_distance_m);
 			Vector2f bodyrate;
 			bodyrate(0) = optical_flow.gyro_x_rate_integral;
 			bodyrate(1) = optical_flow.gyro_y_rate_integral;
-			_ekf->setOpticalFlowData(optical_flow.timestamp, &flowrate, &bodyrate);
-			_ekf->setRangeData(optical_flow.timestamp, &optical_flow.ground_distance_m);
+			if(!isnan(optical_flow.pixel_flow_y_integral) && !isnan(optical_flow.pixel_flow_x_integral)) {
+				_ekf->setOpticalFlowData(optical_flow.timestamp, &flowrate, &bodyrate);
+				_ekf->setRangeData(optical_flow.timestamp, &optical_flow.ground_distance_m);
+			}
 		}
 		// run the EKF update
 		_ekf->update();
