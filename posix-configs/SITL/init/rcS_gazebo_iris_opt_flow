@@ -31,6 +31,36 @@ param set COM_RC_IN_MODE 1
 param set NAV_ACC_RAD 2.0
 param set RTL_RETURN_ALT 30.0
 param set RTL_DESCEND_ALT 10.0
+param set RC_MAP_MODE_SW 5
+param set RC_MAP_ROLL 1
+param set RC_MAP_PITCH 2
+param set RC_MAP_THROTTLE 3
+param set RC_MAP_YAW 4
+param set RC1_DZ 10
+param set RC1_MAX 1988
+param set RC1_MIN 1003
+param set RC1_REV 1
+param set RC1_TRIM 1499
+param set RC2_DZ 10
+param set RC2_MAX 1987
+param set RC2_MIN 1023
+param set RC2_REV -1
+param set RC2_TRIM 1499
+param set RC3_DZ 10
+param set RC3_MAX 1877
+param set RC3_MIN 1023
+param set RC3_REV 1
+param set RC3_TRIM 1023
+param set RC4_DZ 10
+param set RC4_MAX 1998
+param set RC4_MIN 1012
+param set RC4_REV 1
+param set RC4_TRIM 1500
+param set RC5_DZ 10
+param set RC5_MAX 2000
+param set RC5_MIN 1000
+param set RC5_REV 1
+param set RC5_TRIM 1500
 rgbledsim start
 tone_alarm start
 gyrosim start

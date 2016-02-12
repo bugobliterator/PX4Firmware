@@ -76,6 +76,7 @@
 #include <uORB/topics/ekf2_innovations.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/optical_flow.h>
+#include <uORB/topics/distance_sensor.h>
 
 
 #include <ecl/EKF/ekf.h>
@@ -133,6 +134,7 @@ private:
 	int		_params_sub = -1;
 	int		_control_mode_sub = -1;
 	int 	_optical_flow_sub = -1;
+	int 	_range_finder_sub = -1;
 
 	orb_advert_t _att_pub;
 	orb_advert_t _lpos_pub;
@@ -252,7 +254,8 @@ void Ekf2::print()
 
 void Ekf2::print_status()
 {
-	warnx("position OK %s", (_ekf->position_is_valid()) ? "[YES]" : "[NO]");
+	warnx("global position OK %s", (_ekf->global_position_is_valid()) ? "[YES]" : "[NO]");
+	warnx("local position OK %s", (_ekf->local_position_is_valid()) ? "[YES]" : "[NO]");
 }
 
 void Ekf2::task_main()
@@ -264,6 +267,7 @@ void Ekf2::task_main()
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_control_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_optical_flow_sub = orb_subscribe(ORB_ID(optical_flow));
+	_range_finder_sub = orb_subscribe(ORB_ID(distance_sensor));
 
 	px4_pollfd_struct_t fds[2] = {};
 	fds[0].fd = _sensors_sub;
@@ -307,11 +311,13 @@ void Ekf2::task_main()
 		bool airspeed_updated = false;
 		bool control_mode_updated = false;
 		bool optical_flow_updated = false;
+		bool range_finder_updated = false;
 
 		sensor_combined_s sensors = {};
 		airspeed_s airspeed = {};
 		vehicle_control_mode_s vehicle_control_mode = {};
 		optical_flow_s optical_flow = {};
+		distance_sensor_s range_finder = {};
 
 		orb_copy(ORB_ID(sensor_combined), _sensors_sub, &sensors);
 
@@ -332,6 +338,12 @@ void Ekf2::task_main()
 
 		if(optical_flow_updated) {
 			orb_copy(ORB_ID(optical_flow), _optical_flow_sub, &optical_flow);
+		}
+
+		orb_check(_range_finder_sub, &range_finder_updated);
+
+		if(range_finder_updated) {
+			orb_copy(ORB_ID(distance_sensor), _range_finder_sub, &range_finder);
 		}
 		// Use the control model data to determine if the motors are armed as a surrogate for an on-ground vs in-air status
 		// TODO implement a global vehicle on-ground/in-air check
@@ -386,14 +398,20 @@ void Ekf2::task_main()
 			Vector2f flowrate;
 			flowrate(0) = optical_flow.pixel_flow_x_integral;
 			flowrate(1) = optical_flow.pixel_flow_y_integral;
+			uint8_t quality = optical_flow.quality;
 			Vector2f bodyrate;
 			bodyrate(0) = optical_flow.gyro_x_rate_integral;
 			bodyrate(1) = optical_flow.gyro_y_rate_integral;
 			if(!isnan(optical_flow.pixel_flow_y_integral) && !isnan(optical_flow.pixel_flow_x_integral)) {
-				_ekf->setOpticalFlowData(optical_flow.timestamp, &flowrate, &bodyrate);
-				_ekf->setRangeData(optical_flow.timestamp, &optical_flow.ground_distance_m);
+				_ekf->setOpticalFlowData(optical_flow.timestamp, quality, &flowrate, &bodyrate, optical_flow.integration_timespan);
+				//_ekf->setRangeData(optical_flow.timestamp, &optical_flow.ground_distance_m);
 			}
 		}
+
+		if(range_finder_updated) {
+			_ekf->setRangeData(range_finder.timestamp, &range_finder.current_distance);
+		}
+
 		// run the EKF update
 		_ekf->update();
 
@@ -428,16 +446,16 @@ void Ekf2::task_main()
 		lpos.vz = vel[2];
 
 		// TODO: better status reporting
-		lpos.xy_valid = _ekf->position_is_valid();
+		lpos.xy_valid = _ekf->global_position_is_valid();
 		lpos.z_valid = true;
-		lpos.v_xy_valid = _ekf->position_is_valid();
+		lpos.v_xy_valid = _ekf->global_position_is_valid();
 		lpos.v_z_valid = true;
 
 		// Position of local NED origin in GPS / WGS84 frame
 		struct map_projection_reference_s ekf_origin = {};
 		_ekf->get_ekf_origin(&lpos.ref_timestamp, &ekf_origin, &lpos.ref_alt);
 		lpos.xy_global =
-			_ekf->position_is_valid();          // true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
+			_ekf->global_position_is_valid();          // true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
 		lpos.z_global = true;                                // true if z is valid and has valid global reference (ref_alt)
 		lpos.ref_lat = ekf_origin.lat_rad * 180.0 / M_PI; // Reference point latitude in degrees
 		lpos.ref_lon = ekf_origin.lon_rad * 180.0 / M_PI; // Reference point longitude in degrees
@@ -445,10 +463,10 @@ void Ekf2::task_main()
 		// The rotation of the tangent plane vs. geographical north
 		lpos.yaw = 0.0f;
 
-		lpos.dist_bottom = 0.0f; // Distance to bottom surface (ground) in meters
-		lpos.dist_bottom_rate = 0.0f; // Distance to bottom surface (ground) change rate
-		lpos.surface_bottom_timestamp	= 0; // Time when new bottom surface found
-		lpos.dist_bottom_valid = false; // true if distance to bottom surface is valid
+		lpos.dist_bottom = -pos[2]; // Distance to bottom surface (ground) in meters
+		lpos.dist_bottom_rate = -vel[2]; // Distance to bottom surface (ground) change rate
+		lpos.surface_bottom_timestamp	= hrt_absolute_time(); // Time when new bottom surface found
+		lpos.dist_bottom_valid = true; // true if distance to bottom surface is valid
 
 		// TODO: uORB definition does not define what thes variables are. We have assumed them to be horizontal and vertical 1-std dev accuracy in metres
 		// TODO: Should use sqrt of filter position variances
@@ -505,7 +523,7 @@ void Ekf2::task_main()
 		// generate and publish global position data
 		struct vehicle_global_position_s global_pos = {};
 
-		if (_ekf->position_is_valid()) {
+		if (_ekf->global_position_is_valid()) {
 			// TODO: local origin is currenlty at GPS height origin - this is different to ekf_att_pos_estimator
 
 			global_pos.timestamp = hrt_absolute_time(); // Time of this estimate, in microseconds since system start
