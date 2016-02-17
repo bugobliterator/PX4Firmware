@@ -255,7 +255,8 @@ Ekf2::~Ekf2()
 
 void Ekf2::print_status()
 {
-	warnx("position OK %s", (_ekf->position_is_valid()) ? "[YES]" : "[NO]");
+	warnx("global position OK %s", (_ekf->global_position_is_valid()) ? "[YES]" : "[NO]");
+	warnx("local position OK %s", (_ekf->local_position_is_valid()) ? "[YES]" : "[NO]");
 }
 
 void Ekf2::task_main()
@@ -456,19 +457,21 @@ void Ekf2::task_main()
 		lpos.vz = vel[2];
 
 		// TODO: better status reporting
-		lpos.xy_valid = _ekf->position_is_valid();
+		lpos.xy_valid = _ekf->local_position_is_valid() || _ekf->global_position_is_valid();
 		lpos.z_valid = true;
-		lpos.v_xy_valid = _ekf->position_is_valid();
+		lpos.v_xy_valid = _ekf->local_position_is_valid() || _ekf->global_position_is_valid();
 		lpos.v_z_valid = true;
 
 		// Position of local NED origin in GPS / WGS84 frame
 		struct map_projection_reference_s ekf_origin = {};
-		_ekf->get_ekf_origin(&lpos.ref_timestamp, &ekf_origin, &lpos.ref_alt);
-		lpos.xy_global =
-			_ekf->position_is_valid();          // true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
-		lpos.z_global = true;                                // true if z is valid and has valid global reference (ref_alt)
-		lpos.ref_lat = ekf_origin.lat_rad * 180.0 / M_PI; // Reference point latitude in degrees
-		lpos.ref_lon = ekf_origin.lon_rad * 180.0 / M_PI; // Reference point longitude in degrees
+		if(_ekf->global_position_is_valid()) {
+			_ekf->get_ekf_origin(&lpos.ref_timestamp, &ekf_origin, &lpos.ref_alt);
+			lpos.xy_global =
+			_ekf->global_position_is_valid(); // true if position (x, y) is valid and has valid global reference (ref_lat, ref_lon)
+			lpos.z_global = _ekf->global_position_is_valid(); // true if z is valid and has valid global reference (ref_alt)
+			lpos.ref_lat = ekf_origin.lat_rad * 180.0 / M_PI; // Reference point latitude in degrees
+			lpos.ref_lon = ekf_origin.lon_rad * 180.0 / M_PI; // Reference point longitude in degrees
+		}
 
 		// The rotation of the tangent plane vs. geographical north
 		lpos.yaw = 0.0f;
@@ -533,7 +536,7 @@ void Ekf2::task_main()
 		// generate and publish global position data
 		struct vehicle_global_position_s global_pos = {};
 
-		if (_ekf->position_is_valid()) {
+		if (_ekf->global_position_is_valid()) {
 			// TODO: local origin is currenlty at GPS height origin - this is different to ekf_att_pos_estimator
 
 			global_pos.timestamp = hrt_absolute_time(); // Time of this estimate, in microseconds since system start
