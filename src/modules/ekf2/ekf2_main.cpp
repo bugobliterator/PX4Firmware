@@ -76,6 +76,8 @@
 #include <uORB/topics/ekf2_innovations.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/optical_flow.h>
+#include <uORB/topics/distance_sensor.h>
 
 #include <ecl/EKF/ekf.h>
 
@@ -130,6 +132,8 @@ private:
 	int		_params_sub = -1;
 	int		_control_mode_sub = -1;
 	int 	_vehicle_status_sub = -1;
+	int 	_optical_flow_sub = -1;
+	int 	_range_finder_sub = -1;
 
 	bool            _prev_motors_armed = false; // motors armed status from the previous frame
 
@@ -263,6 +267,8 @@ void Ekf2::task_main()
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_control_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
+	_optical_flow_sub = orb_subscribe(ORB_ID(optical_flow));
+	_range_finder_sub = orb_subscribe(ORB_ID(distance_sensor));
 
 	px4_pollfd_struct_t fds[2] = {};
 	fds[0].fd = _sensors_sub;
@@ -306,10 +312,14 @@ void Ekf2::task_main()
 		bool airspeed_updated = false;
 		bool control_mode_updated = false;
 		bool vehicle_status_updated = false;
+		bool optical_flow_updated = false;
+		bool range_finder_updated = false;
 
 		sensor_combined_s sensors = {};
 		airspeed_s airspeed = {};
 		vehicle_control_mode_s vehicle_control_mode = {};
+		optical_flow_s optical_flow = {};
+		distance_sensor_s range_finder = {};
 
 		orb_copy(ORB_ID(sensor_combined), _sensors_sub, &sensors);
 
@@ -326,6 +336,17 @@ void Ekf2::task_main()
 			orb_copy(ORB_ID(airspeed), _airspeed_sub, &airspeed);
 		}
 
+		orb_check(_optical_flow_sub, &optical_flow_updated);
+
+		if(optical_flow_updated) {
+			orb_copy(ORB_ID(optical_flow), _optical_flow_sub, &optical_flow);
+		}
+
+		orb_check(_range_finder_sub, &range_finder_updated);
+
+		if(range_finder_updated) {
+			orb_copy(ORB_ID(distance_sensor), _range_finder_sub, &range_finder);
+		}
 		// Use the control model data to determine if the motors are armed as a surrogate for an on-ground vs in-air status
 		// TODO implement a global vehicle on-ground/in-air check
 		orb_check(_control_mode_sub, &control_mode_updated);
@@ -373,6 +394,23 @@ void Ekf2::task_main()
 		// read airspeed data if available
 		if (airspeed_updated) {
 			_ekf->setAirspeedData(airspeed.timestamp, &airspeed.indicated_airspeed_m_s);
+		}
+
+		if(optical_flow_updated) {
+			flow_message flow;
+			flow.flowdata(0) = optical_flow.pixel_flow_x_integral;
+			flow.flowdata(1) = optical_flow.pixel_flow_y_integral;
+			flow.quality = optical_flow.quality;
+			flow.gyrodata(0) = optical_flow.gyro_x_rate_integral;
+			flow.gyrodata(1) = optical_flow.gyro_y_rate_integral;
+			flow.dt = optical_flow.integration_timespan;
+			if(!isnan(optical_flow.pixel_flow_y_integral) && !isnan(optical_flow.pixel_flow_x_integral)) {
+				_ekf->setOpticalFlowData(optical_flow.timestamp, &flow);
+			}
+		}
+
+		if(range_finder_updated) {
+			_ekf->setRangeData(range_finder.timestamp, &range_finder.current_distance);
 		}
 
 		// read vehicle status if available for 'landed' information
