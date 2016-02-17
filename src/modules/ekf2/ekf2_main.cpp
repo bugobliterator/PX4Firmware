@@ -474,7 +474,7 @@ void Ekf2::task_main()
 		}
 
 		// The rotation of the tangent plane vs. geographical north
-		lpos.yaw = 0.0f;
+		lpos.yaw = att.yaw;
 
 		lpos.dist_bottom = -pos[2] + lpos.ref_alt; // Distance to bottom surface (ground) in meters
 		lpos.dist_bottom_rate = -vel[2]; // Distance to bottom surface (ground) change rate
