@@ -1160,6 +1160,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_CTS_s log_CTS;
 			struct log_EST4_s log_INO1;
 			struct log_EST5_s log_INO2;
+			struct log_EST6_s log_INO3;
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1852,10 +1853,17 @@ int sdlog2_thread_main(int argc, char *argv[])
 				log_msg.body.log_INO2.s[i] = buf.innovations.mag_innov[i];
 				log_msg.body.log_INO2.s[i + 3] = buf.innovations.mag_innov_var[i];
 			}
-
 			log_msg.body.log_INO2.s[6] = buf.innovations.heading_innov;
 			log_msg.body.log_INO2.s[7] = buf.innovations.heading_innov_var;
+
 			LOGBUFFER_WRITE_AND_COUNT(EST5);
+			log_msg.msg_type = LOG_EST6_MSG;
+			memset(&(log_msg.body.log_INO3.s), 0, sizeof(log_msg.body.log_INO3.s));
+			for(unsigned i = 0; i < 2; i++) {
+				log_msg.body.log_INO3.s[i] = buf.innovations.flow_innov[i];
+				log_msg.body.log_INO3.s[i + 2] = buf.innovations.flow_innov_var[i];
+			}
+			LOGBUFFER_WRITE_AND_COUNT(EST6);
 
 		}
 
