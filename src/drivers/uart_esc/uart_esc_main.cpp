@@ -49,6 +49,8 @@
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/mixer/mixer_multirotor.generated.h>
 #include <systemlib/param/param.h>
+#include <dev_fs_lib_serial.h>
+#include <v1.0/checksum.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,14 +73,13 @@ volatile bool _task_should_exit = false; // flag indicating if uart_esc task sho
 static char _device[MAX_LEN_DEV_PATH];
 static bool _is_running = false;         // flag indicating if uart_esc app is running
 static px4_task_t _task_handle = -1;     // handle to the task main thread
-UartEsc *esc;                            // esc instance
 void uart_esc_rotate_motors(int16_t *motor_rpm, int num_rotors); // motor re-mapping
 
 // subscriptions
 int		_controls_sub;
 int		_armed_sub;
 int		_param_sub;
-
+int 	_fd;
 // filenames
 // /dev/fs/ is mapped to /usr/share/data/adsp/
 static const char *MIXER_FILENAME = "/dev/fs/mixer_config.mix";
@@ -268,6 +269,29 @@ void uart_esc_rotate_motors(int16_t *motor_rpm, int num_rotors)
 	}
 }
 
+int uart_initialize(const char *device, int baud)
+{
+
+    int fd = ::open(device, O_RDWR | O_NONBLOCK);
+    if (fd == -1) {
+        return -1;
+    }
+    struct dspal_serial_open_options options;
+    options.bit_rate = DSPAL_SIO_BITRATE_57600;
+    options.tx_flow = DSPAL_SIO_FCTL_OFF;
+    options.rx_flow = DSPAL_SIO_FCTL_OFF;
+    options.rx_data_callback = nullptr;
+    options.tx_data_callback = nullptr;
+    options.is_tx_data_synchronous = false;
+    int ret = ::ioctl(fd, SERIAL_IOCTL_OPEN_OPTIONS, (void *)&options);
+    if (ret != 0) {
+        PX4_ERR("Failed to setup UART flow control options");
+    }
+
+    _fd = fd;
+    return 0;
+}
+
 void task_main(int argc, char *argv[])
 {
 	PX4_INFO("enter task_main");
@@ -276,13 +300,7 @@ void task_main(int argc, char *argv[])
 
 	parameters_init();
 
-	esc = UartEsc::get_instance();
-
-	if (esc == NULL) {
-		PX4_ERR("failed to new UartEsc instance");
-
-	} else if (esc->initialize((enum esc_model_t)_parameters.model,
-	           _device, _parameters.baudrate) < 0) {
+	if (uart_initialize(_device, _parameters.baudrate) < 0) {
 		PX4_ERR("failed to initialize UartEsc");
 
 	} else {
@@ -344,24 +362,48 @@ void task_main(int argc, char *argv[])
 						continue;
 					}
 
-					// Send outputs to the ESCs
-					for (unsigned outIdx = 0; outIdx < _outputs.noutputs; outIdx++) {
-						// map -1.0 - 1.0 outputs to RPMs
-						motor_rpms[outIdx] = (int16_t)(((_outputs.output[outIdx] + 1.0) / 2.0) *
-								     (esc->max_rpm() - esc->min_rpm()) + esc->min_rpm());
+					// iterate actuators
+					for (unsigned i = 0; i < _outputs.noutputs; i++) {
+						// last resort: catch NaN, INF and out-of-band errors
+						if (i < _outputs.noutputs &&
+						    PX4_ISFINITE(_outputs.output[i]) &&
+						    _outputs.output[i] >= -1.0f &&
+						    _outputs.output[i] <= 1.0f) {
+							// scale for PWM output 1000 - 2000us
+							_outputs.output[i] = 1500 + (500 * _outputs.output[i]);
+						} else {
+							//
+							// Value is NaN, INF or out of band - set to the minimum value.
+							// This will be clearly visible on the servo status and will limit the risk of accidentally
+							// spinning motors. It would be deadly in flight.
+							 //
+							_outputs.output[i] = 900;
+						}
 					}
-
 					uart_esc_rotate_motors(motor_rpms, _outputs.noutputs);
 
 				} else {
 					_outputs.noutputs = UART_ESC_MAX_MOTORS;
 					for (unsigned outIdx = 0; outIdx < _outputs.noutputs; outIdx++) {
-						motor_rpms[outIdx]      = 0;
-						_outputs.output[outIdx] = -1.0;
+						_outputs.output[outIdx] = 1000;
 					}
 				}
+				uint8_t data[11];
+			    struct PACKED {
+			        uint8_t magic = 0xF7;
+			        uint16_t period[4];
+			        uint16_t crc;
+			    } frame;
 
-				esc->send_rpms(motor_rpms, _outputs.noutputs);
+			    for(uint8_t i = 0; i < 4; i++) {
+			    	frame.period[i] = _outputs.output[i];
+			    }
+			    frame.crc = crc_calculate((uint8_t*)frame.period, 4*2);
+
+			    data[0] = frame.magic;
+			    memcpy(&data[1],(uint8_t*)frame.period, sizeof(frame.period));
+			    memcpy(&data[9],(uint8_t*)&frame.crc,sizeof(frame.crc));
+				::write(_fd, data, sizeof(data));
 
 				/*
 				static int count=0;
@@ -403,8 +445,6 @@ void task_main(int argc, char *argv[])
 	}
 
 	PX4_WARN("closing uart_esc");
-
-	delete esc;
 }
 
 /** uart_esc main entrance */
