@@ -44,7 +44,7 @@
 extern "C" __EXPORT hrt_abstime hrt_reset(void);
 
 #define SEND_INTERVAL 	20
-#define UDP_PORT 	14560
+#define UDP_PORT 	14567
 #define PIXHAWK_DEVICE "/dev/ttyACM0"
 
 #ifndef B460800
@@ -231,12 +231,12 @@ void Simulator::update_gps(mavlink_hil_gps_t *gps_sim)
 	gps.cog = gps_sim->cog;
 	gps.fix_type = gps_sim->fix_type;
 	gps.satellites_visible = gps_sim->satellites_visible;
-
 	write_gps_data((void *)&gps);
 }
 
 void Simulator::handle_message(mavlink_message_t *msg, bool publish)
 {
+	static uint64_t timestep;
 	switch (msg->msgid) {
 	case MAVLINK_MSG_ID_HIL_SENSOR: {
 			mavlink_hil_sensor_t imu;
@@ -253,7 +253,8 @@ void Simulator::handle_message(mavlink_message_t *msg, bool publish)
 			if (publish) {
 				publish_sensor_topics(&imu);
 			}
-
+			//printf("Time: %f\n",1e6f/double(timestamp - timestep));
+			timestep = timestamp;
 			update_sensors(&imu);
 		}
 		break;
