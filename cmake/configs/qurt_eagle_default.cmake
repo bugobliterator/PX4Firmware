@@ -75,6 +75,7 @@ set(config_module_list
 	#
 	# TODO: make the GPS driver compile
 	drivers/gps
+	drivers/uart_esc
 
 	#
 	# Libraries
