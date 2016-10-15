@@ -71,7 +71,7 @@ __EXPORT void led_on(int led)
 {
 	if (led == 1) {
 		/* Pull down to switch on */
-		px4_arch_gpiowrite(GPIO_LED1, false);
+		px4_arch_gpiowrite(GPIO_LED1, true);
 	}
 }
 
@@ -79,7 +79,7 @@ __EXPORT void led_off(int led)
 {
 	if (led == 1) {
 		/* Pull up to switch off */
-		px4_arch_gpiowrite(GPIO_LED1, true);
+		px4_arch_gpiowrite(GPIO_LED1, false);
 	}
 }
 
