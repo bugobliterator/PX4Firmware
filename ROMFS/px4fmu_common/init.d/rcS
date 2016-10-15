@@ -524,61 +524,65 @@ then
 	if ver hwcmp PX4FMU_V1
 	then
 	else
-		# XXX We need a better way for runtime eval of shell variables,
-		# but this works for now
-		if param compare SYS_COMPANION 10
+		if ver hwcmp NAYAN_FSC
 		then
-			frsky_telemetry start -d /dev/ttyS2
-		fi
-		if param compare SYS_COMPANION 20
-		then
-			syslink start
-			mavlink start -d /dev/bridge0 -b 57600 -m osd -r 40000
-		fi
-		if param compare SYS_COMPANION 921600
-		then
-			mavlink start -d /dev/ttyS2 -b 921600 -m onboard -r 80000 -x
-		fi
-		if param compare SYS_COMPANION 57600
-		then
-			mavlink start -d /dev/ttyS2 -b 57600 -m onboard -r 5000 -x
-		fi
-		if param compare SYS_COMPANION 157600
-		then
-			mavlink start -d /dev/ttyS2 -b 57600 -m osd -r 1000
-		fi
-		if param compare SYS_COMPANION 257600
-		then
-			mavlink start -d /dev/ttyS2 -b 57600 -m magic -r 5000 -x
-		fi
-		if param compare SYS_COMPANION 319200
-		then
-			mavlink start -d /dev/ttyS2 -b 19200 -r 1000
-		fi
-		if param compare SYS_COMPANION 338400
-		then
-			mavlink start -d /dev/ttyS2 -b 38400 -r 1000
-		fi
-		if param compare SYS_COMPANION 357600
-		then
-			mavlink start -d /dev/ttyS2 -b 57600 -r 1000
-		fi
-		if param compare SYS_COMPANION 1921600
-		then
-			mavlink start -d /dev/ttyS2 -b 921600 -r 20000
-		fi
-		# Sensors on the PWM interface bank
-		# clear pins 5 and 6
-		if param compare SENS_EN_LL40LS 1
-		then
-			set FMU_MODE pwm4
-			set AUX_MODE pwm4
-		fi
-		if param greater TRIG_MODE 0
-		then
-			set FMU_MODE pwm4
-			set AUX_MODE pwm4
-			camera_trigger start
+		else
+			# XXX We need a better way for runtime eval of shell variables,
+			# but this works for now
+			if param compare SYS_COMPANION 10
+			then
+				frsky_telemetry start -d /dev/ttyS2
+			fi
+			if param compare SYS_COMPANION 20
+			then
+				syslink start
+				mavlink start -d /dev/bridge0 -b 57600 -m osd -r 40000
+			fi
+			if param compare SYS_COMPANION 921600
+			then
+				mavlink start -d /dev/ttyS2 -b 921600 -m onboard -r 80000 -x
+			fi
+			if param compare SYS_COMPANION 57600
+			then
+				mavlink start -d /dev/ttyS2 -b 57600 -m onboard -r 5000 -x
+			fi
+			if param compare SYS_COMPANION 157600
+			then
+				mavlink start -d /dev/ttyS2 -b 57600 -m osd -r 1000
+			fi
+			if param compare SYS_COMPANION 257600
+			then
+				mavlink start -d /dev/ttyS2 -b 57600 -m magic -r 5000 -x
+			fi
+			if param compare SYS_COMPANION 319200
+			then
+				mavlink start -d /dev/ttyS2 -b 19200 -r 1000
+			fi
+			if param compare SYS_COMPANION 338400
+			then
+				mavlink start -d /dev/ttyS2 -b 38400 -r 1000
+			fi
+			if param compare SYS_COMPANION 357600
+			then
+				mavlink start -d /dev/ttyS2 -b 57600 -r 1000
+			fi
+			if param compare SYS_COMPANION 1921600
+			then
+				mavlink start -d /dev/ttyS2 -b 921600 -r 20000
+			fi
+			# Sensors on the PWM interface bank
+			# clear pins 5 and 6
+			if param compare SENS_EN_LL40LS 1
+			then
+				set FMU_MODE pwm4
+				set AUX_MODE pwm4
+			fi
+			if param greater TRIG_MODE 0
+			then
+				set FMU_MODE pwm4
+				set AUX_MODE pwm4
+				camera_trigger start
+			fi
 		fi
 	fi
 

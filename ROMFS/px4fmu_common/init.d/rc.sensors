@@ -219,6 +219,23 @@ then
 	fi
 fi
 
+if ver hwcmp NAYAN_FSC
+then
+	# External I2C bus
+	if hmc5883 -C -T -X start
+	then
+	fi
+
+	# External I2C bus
+	if lis3mdl -X start
+	then
+	fi
+
+	if mpu9250 start
+	then
+	fi
+fi
+
 if meas_airspeed start
 then
 else
