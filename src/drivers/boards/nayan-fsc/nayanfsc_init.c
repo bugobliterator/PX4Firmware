@@ -234,15 +234,15 @@ __EXPORT int nsh_archinitialize(void)
 
 	/* Get the SPI port for the FRAM */
 
-	spi2 = px4_spibus_initialize(2);
+	spi4 = px4_spibus_initialize(4);
 
-	if (!spi2) {
-		message("[boot] FAILED to initialize SPI port 2\n");
+	if (!spi4) {
+		message("[boot] FAILED to initialize SPI port 4\n");
 		up_ledon(LED_AMBER);
 		return -ENODEV;
 	}
 
-	/* Default SPI2 to 37.5 MHz (40 MHz rounded to nearest valid divider, F4 max)
+	/* Default SPI4 to 37.5 MHz (40 MHz rounded to nearest valid divider, F4 max)
 	 * and de-assert the known chip selects. */
 
 	// XXX start with 10.4 MHz in FRAM usage and go up to 37.5 once validated
@@ -252,7 +252,7 @@ __EXPORT int nsh_archinitialize(void)
 	SPI_SELECT(spi4, PX4_SPIDEV_BARO, false);
 	SPI_SELECT(spi4, SPIDEV_FLASH, false);
 
-	spi4 = px4_spibus_initialize(4);
+	spi2 = px4_spibus_initialize(2);
 
 	/* Default SPI4 to 1MHz and de-assert the known chip selects. */
 	SPI_SETFREQUENCY(spi2, 10000000);

@@ -88,7 +88,7 @@ __EXPORT void stm32_spiinitialize(void)
 	//px4_arch_configgpio(GPIO_EXTI_GYRO_DRDY);
 	//px4_arch_configgpio(GPIO_EXTI_MAG_DRDY);
 	//px4_arch_configgpio(GPIO_EXTI_ACCEL_DRDY);
-	px4_arch_configgpio(GPIO_EXTI_MPU_DRDY);
+	//px4_arch_configgpio(GPIO_EXTI_MPU_DRDY);
 #endif
 
 #ifdef CONFIG_STM32_SPI4
@@ -98,7 +98,7 @@ __EXPORT void stm32_spiinitialize(void)
 	px4_arch_gpiowrite(GPIO_SPI_CS_BARO, 1);
 #endif
 
-#ifdef CONFIG_STM32_SPI4
+#ifdef CONFIG_STM32_SPI2
 	px4_arch_configgpio(GPIO_SPI_CS_EXT0);
 	px4_arch_gpiowrite(GPIO_SPI_CS_EXT0, 1);
 #endif
