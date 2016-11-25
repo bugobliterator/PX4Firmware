@@ -57,7 +57,7 @@ px4_add_module(
 	MODULE modules__uavcan
 	MAIN uavcan
 	STACK_MAIN 3200
-	STACK_MAX 1500
+	STACK_MAX 3500
 	COMPILE_FLAGS
 	SRCS
 		# Main
@@ -74,7 +74,10 @@ px4_add_module(
 		sensors/gnss.cpp
 		sensors/mag.cpp
 		sensors/baro.cpp
+		sensors/imu.cpp
 
+		# Sensors Pub
+		sensors_pub/sensor_pub.cpp
 	DEPENDS
 		platforms__common
 		uavcan

@@ -1368,6 +1368,25 @@ int uavcan_main(int argc, char *argv[])
 		::exit(0);
 	}
 
+	if (!std::strcmp(argv[1], "disarm")) {
+		inst->arm_actuators(false);
+		::exit(0);
+	}
+
+	if (!std::strcmp(argv[1], "sensor_pub")) {
+
+		if (UavcanSensorPub::instance() != nullptr) {
+			PX4_WARN("already running");
+			::exit(1);
+		}
+
+		if (OK != UavcanSensorPub::start(inst->get_node())) {
+
+			PX4_WARN("start failed");
+			::exit(1);
+		}
+		::exit(0);
+	}
 	/*
 	 * Parameter setting commands
 	 *
