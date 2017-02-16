@@ -46,20 +46,22 @@ where V is Vandermonde matrix in x https://en.wikipedia.org/wiki/Vandermonde_mat
 so by Ordinary Least Squares derivation by minimising ∑(i=0..m)ei^2 here: http://www2.warwick.ac.uk/fac/soc/economics/staff/vetroeger/teaching/po906_week567.pdf
 
 we get A = inv(transpose(V)*V)*(transpose(V)*Y)
+for VTV = transpose(V)*V and VTY = transpose(V)*Y
 
 we accumulate VTV and VTY as they are of fixed size and can be recursed upon
-we can write VTV as
+
+we can write VTV if we solve:
  __                                                                                                                        __
-|      m                      x0+x1+...+xn                   x0^2+x1^2+...+xn^3   ..........  x0^m+x1^m+...+xn^m             |
-|x0+x1+...+xn              x0^2+x1^2+...+xn^3                x0^3+x1^3+...+xn^3   ..........  x0^(m+1)+x1^(m+1)+...+xn^(m+1) |
+|      n                      x0+x1+...+xm                   x0^2+x1^2+...+xm^3   ..........  x0^n+x1^n+...+xn^n             |
+|x0+x1+...+xn              x0^2+x1^2+...+xm^3                x0^3+x1^3+...+xm^3   ..........  x0^(n+1)+x1^(n+1)+...+xm^(n+1) |
 |      .                            .                                  .                             .                       |
 |      .                            .                                  .                             .                       |
 |      .                            .                                  .                             .                       |
-|x0^m+x1^m+...+xn^m     x0^(m+1)+x1^(m+1)+...+xn^(m+1)  x0^(m+2)+x1^(m+2)+...+xn^(m+2) ....  x0^(2m)+x1^(2m)+...+xn^(2m)     |
+|x0^n+x1^n+...+xm^n     x0^(n+1)+x1^(n+1)+...+xm^(n+1)  x0^(n+2)+x1^(n+2)+...+xm^(n+2) ....  x0^(2n)+x1^(2n)+...+xm^(2n)     |
 |__                                                                                                                        __|
 
 
-and for VTY
+and for VTY we get:
  __            __
 |  ∑(i=0..m)yi   |
 | ∑(i=0..m)yi*xi |
@@ -69,7 +71,6 @@ and for VTY
 |∑(i=0..m)yi*xi^n|
 |__            __|
 
-for more on expansion refer https://github.com/jgoppert/iekf_analysis/blob/master/Temperature%20Calibration.ipynb
 */
 
 /*
