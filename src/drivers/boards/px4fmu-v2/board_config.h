@@ -236,6 +236,14 @@ __BEGIN_DECLS
 #define PWMIN_TIMER_CHANNEL	2
 #define GPIO_PWM_IN		GPIO_TIM4_CH2IN_2
 
+/* Extra Purpose DMA */
+//Note: Only DMA2 has access to AHB bus meaning GPIO registers are only modifiable by DMA2, 
+//refer DMA section of stm32F4 series User manual for further details.
+#define DMAMAP_BITBANG  STM32_DMA_MAP(DMA2,DMA_STREAM1,DMA_CHAN6)
+#define TIMER_BITBANG   1
+// Refer manual for DMA Request map to select proper timer channel
+#define TIMER_BITBANG_CH 1
+#define BITBANG_GPIO_REG_BASE STM32_GPIOE_BASE
 /****************************************************************************************************
  * Public Types
  ****************************************************************************************************/
