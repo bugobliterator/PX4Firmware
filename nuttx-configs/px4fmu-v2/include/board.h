@@ -81,6 +81,10 @@
  * HSE - On-board crystal frequency is 24MHz
  * LSE - not installed
  */
+#if HAL_MINIMIZE_FEATURES >= 2	//Disable NSH drivers to minimize firmware footprint
+#undef CONFIG_MTD
+#undef CONFIG_MMCSD
+#endif
 
 #define STM32_BOARD_XTAL        24000000ul
 

@@ -65,6 +65,7 @@ def main():
                 continue
 
             file_path = os.path.join(root, file)
+            print("Pruning File ",file_path)
 
             # read file line by line
             pruned_content = ""
