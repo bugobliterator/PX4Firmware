@@ -51,9 +51,9 @@
 #include <fcntl.h>
 #include <systemlib/err.h>
 #include <drivers/drv_hrt.h>
-
+#ifndef DISABLE_UORB
 #include <uORB/topics/actuator_armed.h>
-
+#endif
 __EXPORT int nshterm_main(int argc, char *argv[]);
 
 int
@@ -66,9 +66,11 @@ nshterm_main(int argc, char *argv[])
 
 	unsigned retries = 0;
 	int fd = -1;
+
+#ifndef DISABLE_UORB
 	int armed_fd = orb_subscribe(ORB_ID(actuator_armed));
 	struct actuator_armed_s armed;
-
+#endif
 	/* back off 1800 ms to avoid running into the USB setup timing */
 	while (hrt_absolute_time() < 1800U * 1000U) {
 		usleep(50000);
@@ -76,7 +78,7 @@ nshterm_main(int argc, char *argv[])
 
 	/* try to bring up the console - stop doing so if the system gets armed */
 	while (true) {
-
+#ifndef DISABLE_UORB
 		/* abort if an arming topic is published and system is armed */
 		bool updated = false;
 		orb_check(armed_fd, &updated);
@@ -93,13 +95,15 @@ nshterm_main(int argc, char *argv[])
 				exit(0);
 			}
 		}
-
+#endif
 		/* the retries are to cope with the behaviour of /dev/ttyACM0 */
 		/* which may not be ready immediately. */
 		fd = open(argv[1], O_RDWR);
 
 		if (fd != -1) {
+#ifndef DISABLE_UORB
 			close(armed_fd);
+#endif
 			break;
 		}
 

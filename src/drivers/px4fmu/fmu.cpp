@@ -78,7 +78,7 @@
 #include <lib/rc/st24.h>
 #include <lib/rc/sumd.h>
 #include <lib/rc/srxl.h>
-
+#ifndef DISABLE_UORB
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_controls_0.h>
 #include <uORB/topics/actuator_controls_1.h>
@@ -88,7 +88,7 @@
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/safety.h>
-
+#endif
 
 #ifdef HRT_PPM_CHANNEL
 # include <systemlib/ppm_decode.h>
@@ -190,8 +190,10 @@ private:
 	int		_param_sub;
 	int		_safety_sub;
 	struct rc_input_values	_rc_in;
+#ifndef DISABLE_UORB
 	orb_advert_t	_to_input_rc;
 	orb_advert_t	_outputs_pub;
+#endif
 	unsigned	_num_outputs;
 	int		_class_instance;
 	int		_rcs_fd;
@@ -208,6 +210,7 @@ private:
 
 	MixerGroup	*_mixers;
 
+#ifndef DISABLE_UORB
 	uint32_t	_groups_required;
 	uint32_t	_groups_subscribed;
 	int		_control_subs[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
@@ -215,7 +218,7 @@ private:
 	orb_id_t	_control_topics[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
 	pollfd	_poll_fds[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
 	unsigned	_poll_fds_num;
-
+#endif
 	static pwm_limit_t	_pwm_limit;
 	static actuator_armed_s	_armed;
 	uint16_t	_failsafe_pwm[_max_actuators];
@@ -228,7 +231,9 @@ private:
 	unsigned	_num_disarmed_set;
 	bool		_safety_off;
 	bool		_safety_disabled;
+#ifndef DISABLE_UORB
 	orb_advert_t	_to_safety;
+#endif
 	bool		_oneshot_mode;
 	hrt_abstime	_oneshot_delay_till;
 	uint16_t	_ignore_safety_mask;
@@ -246,12 +251,16 @@ private:
 					 float &input);
 	void		capture_callback(uint32_t chan_index,
 					 hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
+#ifndef DISABLE_UORB
 	void		subscribe();
+#endif
 	int		set_pwm_rate(unsigned rate_map, unsigned default_rate, unsigned alt_rate);
 	int		set_pwm_clock(unsigned rate_map, unsigned clock_MHz);
 	int		pwm_ioctl(file *filp, int cmd, unsigned long arg);
 	void		update_pwm_rev_mask();
+#ifndef DISABLE_UORB
 	void		publish_pwm_outputs(uint16_t *values, size_t numvalues);
+#endif
 	void		update_pwm_out_state(void);
 	void		pwm_output_set(unsigned i, unsigned value);
 
@@ -394,12 +403,14 @@ PX4FMU::PX4FMU() :
 	_pwm_clock(1),
 	_current_update_rate(0),
 	_work{},
+#ifndef DISABLE_UORB
 	_armed_sub(-1),
 	_param_sub(-1),
 	_safety_sub(-1),
 	_rc_in{},
 	_to_input_rc(nullptr),
 	_outputs_pub(nullptr),
+#endif
 	_num_outputs(0),
 	_class_instance(0),
 	_rcs_fd(-1),
@@ -410,10 +421,12 @@ PX4FMU::PX4FMU() :
 	_pwm_initialized(false),
 	_servos_armed(false),
 	_mixers(nullptr),
+#ifndef DISABLE_UORB
 	_groups_required(0),
 	_groups_subscribed(0),
 	_control_subs{ -1},
 	_poll_fds_num(0),
+#endif
 	_failsafe_pwm{0},
 	_disarmed_pwm{0},
 	_output_pwm{0},
@@ -422,7 +435,9 @@ PX4FMU::PX4FMU() :
 	_num_disarmed_set(0),
 	_safety_off(false),
 	_safety_disabled(false),
+#ifndef DISABLE_UORB
 	_to_safety(nullptr),
+#endif
 	_oneshot_mode(false),
 	_oneshot_delay_till(0),
         _ignore_safety_mask(0)
@@ -431,15 +446,16 @@ PX4FMU::PX4FMU() :
 		_min_pwm[i] = PWM_DEFAULT_MIN;
 		_max_pwm[i] = PWM_DEFAULT_MAX;
 	}
-
-	_control_topics[0] = ORB_ID(actuator_controls_0);
+#ifndef DISABLE_UORB
+	_control_topics[0] = 
+	_ID(actuator_controls_0);
 	_control_topics[1] = ORB_ID(actuator_controls_1);
 	_control_topics[2] = ORB_ID(actuator_controls_2);
 	_control_topics[3] = ORB_ID(actuator_controls_3);
 
 	memset(_controls, 0, sizeof(_controls));
 	memset(_poll_fds, 0, sizeof(_poll_fds));
-
+#endif
 	// rc input, published to ORB
 	memset(&_rc_in, 0, sizeof(_rc_in));
 	_rc_in.input_source = input_rc_s::RC_INPUT_SOURCE_PX4FMU_PPM;
@@ -781,7 +797,7 @@ PX4FMU::set_i2c_bus_clock(unsigned bus, unsigned clock_hz)
 {
 	return device::I2C::set_bus_clock(bus, clock_hz);
 }
-
+#ifndef DISABLE_UORB
 void
 PX4FMU::subscribe()
 {
@@ -809,7 +825,7 @@ PX4FMU::subscribe()
 		}
 	}
 }
-
+#endif
 void
 PX4FMU::update_pwm_rev_mask()
 {
@@ -829,7 +845,7 @@ PX4FMU::update_pwm_rev_mask()
 		}
 	}
 }
-
+#ifndef DISABLE_UORB
 void
 PX4FMU::publish_pwm_outputs(uint16_t *values, size_t numvalues)
 {
@@ -849,7 +865,7 @@ PX4FMU::publish_pwm_outputs(uint16_t *values, size_t numvalues)
 		orb_publish(ORB_ID(actuator_outputs), _outputs_pub, &outputs);
 	}
 }
-
+#endif
 
 void
 PX4FMU::work_start()
@@ -983,10 +999,10 @@ PX4FMU::cycle()
 	if (!_initialized) {
 		/* force a reset of the update rate */
 		_current_update_rate = 0;
-
+#ifndef DISABLE_UORB
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_param_sub = orb_subscribe(ORB_ID(parameter_update));
-
+#endif
 		/* initialize PWM limit lib */
 		pwm_limit_init(&_pwm_limit);
 
@@ -1005,7 +1021,7 @@ PX4FMU::cycle()
 
 		_initialized = true;
 	}
-
+#ifndef DISABLE_UORB
 	if (_safety_sub == -1) {
 		_safety_sub = orb_subscribe(ORB_ID(safety));
 	}
@@ -1016,7 +1032,7 @@ PX4FMU::cycle()
 		/* force setting update rate */
 		_current_update_rate = 0;
 	}
-
+#endif
 	/*
 	 * Adjust actuator topic update rate to keep up with
 	 * the highest servo update rate configured.
@@ -1040,17 +1056,17 @@ PX4FMU::cycle()
 		}
 
 		DEVICE_DEBUG("adjusted actuator update interval to %ums", update_rate_in_ms);
-
+#ifndef DISABLE_UORB
 		for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; i++) {
 			if (_control_subs[i] > 0) {
 				orb_set_interval(_control_subs[i], update_rate_in_ms);
 			}
 		}
-
+#endif
 		// set to current max rate, even if we are actually checking slower/faster
 		_current_update_rate = max_rate;
 	}
-
+#ifndef DISABLE_UORB
 	/* check if anything updated */
 	int ret = ::poll(_poll_fds, _poll_fds_num, 0);
 
@@ -1066,7 +1082,6 @@ PX4FMU::cycle()
 //			warnx("no PWM: failsafe");
 
 	} else {
-
 		/* get controls for required topics */
 		unsigned poll_id = 0;
 
@@ -1094,7 +1109,6 @@ PX4FMU::cycle()
 				poll_id++;
 			}
 		}
-
 		/* can we mix? */
 		if (_mixers != nullptr) {
 
@@ -1164,10 +1178,12 @@ PX4FMU::cycle()
 			for (size_t i = 0; i < num_outputs; i++) {
 				pwm_output_set(i, pwm_limited[i]);
 			}
-
+#ifndef DISABLE_UORB
 			publish_pwm_outputs(pwm_limited, num_outputs);
+#endif
 		}
 	}
+#endif //DISABLE_UORB
 
 	_cycle_timestamp = hrt_absolute_time();
 
@@ -1201,7 +1217,7 @@ PX4FMU::cycle()
 			safety.safety_off = false;
 			safety.safety_switch_available = true;
 		}
-
+#ifndef DISABLE_UORB
 		/* lazily publish the safety status */
 		if (_to_safety != nullptr) {
 			orb_publish(ORB_ID(safety), _to_safety, &safety);
@@ -1209,7 +1225,7 @@ PX4FMU::cycle()
 		} else {
 			_to_safety = orb_advertise(ORB_ID(safety), &safety);
 		}
-
+#endif
 		update_pwm_out_state();
 	}
 
@@ -1217,6 +1233,7 @@ PX4FMU::cycle()
 	// slave safety from IO
 	if (_cycle_timestamp - _last_safety_check >= (unsigned int)1e5) {
 		_last_safety_check = _cycle_timestamp;
+#ifndef DISABLE_UORB
 		bool updated = false;
 		orb_check(_safety_sub, &updated);
 		if (updated) {
@@ -1226,10 +1243,12 @@ PX4FMU::cycle()
 				_safety_off = _safety.safety_off;
 			}
 		}
+#endif
 		update_pwm_out_state();
 	}
 #endif
-	
+
+#ifndef DISABLE_UORB
 	/* check arming state */
 	bool updated = false;
 	orb_check(_armed_sub, &updated);
@@ -1263,8 +1282,8 @@ PX4FMU::cycle()
 			param_set(dsm_bind_param, &dsm_bind_val);
 		}
 	}
-
 	bool rc_updated = false;
+#endif //DISABLE_UORB
 
 #ifdef RC_SERIAL_PORT
 	// This block scans for a supported serial RC input and locks onto the first one found
@@ -1521,7 +1540,7 @@ PX4FMU::cycle()
 
 #endif  // HRT_PPM_CHANNEL
 #endif  // RC_SERIAL_PORT
-
+#ifndef DISABLE_UORB
 	if (rc_updated) {
 		/* lazily advertise on first publication */
 		if (_to_input_rc == nullptr) {
@@ -1534,12 +1553,14 @@ PX4FMU::cycle()
 
 	work_queue(HPWORK, &_work, (worker_t)&PX4FMU::cycle_trampoline, this,
 		   USEC2TICK(SCHEDULE_INTERVAL - main_out_latency));
+#endif //DISABLE_UORB
+
 }
 
 void PX4FMU::work_stop()
 {
 	work_cancel(HPWORK, &_work);
-
+#ifndef DISABLE_UORB
 	for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; i++) {
 		if (_control_subs[i] > 0) {
 			::close(_control_subs[i]);
@@ -1549,7 +1570,7 @@ void PX4FMU::work_stop()
 
 	::close(_armed_sub);
 	::close(_param_sub);
-
+#endif
 	/* make sure servos are off */
 	up_pwm_servo_deinit();
 
@@ -2238,29 +2259,42 @@ PX4FMU::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 		if (_mixers != nullptr) {
 			delete _mixers;
 			_mixers = nullptr;
+#ifndef DISABLE_UORB
 			_groups_required = 0;
+#endif
 		}
 
 		break;
 
 	case MIXERIOCADDSIMPLE: {
 			mixer_simple_s *mixinfo = (mixer_simple_s *)arg;
-
+#ifndef DISABLE_UORB
 			SimpleMixer *mixer = new SimpleMixer(control_callback,
 							     (uintptr_t)_controls, mixinfo);
-
+#else
+			SimpleMixer *mixer = new SimpleMixer(control_callback,
+							     (uintptr_t)nullptr, mixinfo);
+#endif
 			if (mixer->check()) {
 				delete mixer;
+#ifndef DISABLE_UORB
 				_groups_required = 0;
+#endif
 				ret = -EINVAL;
 
 			} else {
 				if (_mixers == nullptr)
+#ifndef DISABLE_UORB
 					_mixers = new MixerGroup(control_callback,
 								 (uintptr_t)_controls);
-
+#else
+					_mixers = new MixerGroup(control_callback,
+								 (uintptr_t)nullptr);
+#endif
 				_mixers->add_mixer(mixer);
+#ifndef DISABLE_UORB
 				_mixers->groups_required(_groups_required);
+#endif
 			}
 
 			break;
@@ -2271,11 +2305,19 @@ PX4FMU::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 			unsigned buflen = strnlen(buf, 1024);
 
 			if (_mixers == nullptr) {
-				_mixers = new MixerGroup(control_callback, (uintptr_t)_controls);
+#ifndef DISABLE_UORB
+					_mixers = new MixerGroup(control_callback,
+								 (uintptr_t)_controls);
+#else
+					_mixers = new MixerGroup(control_callback,
+								 (uintptr_t)nullptr);
+#endif			
 			}
 
 			if (_mixers == nullptr) {
+#ifndef DISABLE_UORB
 				_groups_required = 0;
+#endif
 				ret = -ENOMEM;
 
 			} else {
@@ -2286,12 +2328,16 @@ PX4FMU::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 					DEVICE_DEBUG("mixer load failed with %d", ret);
 					delete _mixers;
 					_mixers = nullptr;
+#ifndef DISABLE_UORB
 					_groups_required = 0;
+#endif				
 					ret = -EINVAL;
 
 				} else {
 
+#ifndef DISABLE_UORB
 					_mixers->groups_required(_groups_required);
+#endif
 				}
 			}
 
@@ -3464,7 +3510,7 @@ test(void)
 
 	exit(0);
 }
-
+#ifndef DISABLE_UORB
 void
 fake(int argc, char *argv[])
 {
@@ -3501,7 +3547,7 @@ fake(int argc, char *argv[])
 
 	exit(0);
 }
-
+#endif
 } // namespace
 
 extern "C" __EXPORT int fmu_main(int argc, char *argv[]);
@@ -3617,11 +3663,11 @@ fmu_main(int argc, char *argv[])
 #endif
 		return 0;
 	}
-
+#ifndef DISABLE_UORB
 	if (!strcmp(verb, "fake")) {
 		fake(argc - 1, argv + 1);
 	}
-
+#endif
 	if (!strcmp(verb, "sensor_reset")) {
 		if (argc > 2) {
 			int reset_time = strtol(argv[2], 0, 0);

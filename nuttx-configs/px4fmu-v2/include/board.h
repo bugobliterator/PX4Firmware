@@ -86,6 +86,7 @@
 #undef CONFIG_MMCSD
 #endif
 
+#define DISABLE_UORB
 #define STM32_BOARD_XTAL        24000000ul
 
 #define STM32_HSI_FREQUENCY     16000000ul

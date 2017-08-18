@@ -65,8 +65,9 @@
 #include <systemlib/err.h>
 #include <systemlib/perf_counter.h>
 
+#ifndef DISABLE_UORB
 #include <uORB/topics/system_power.h>
-
+#endif
 /*
  * Register accessors.
  * For now, no reason not to just use ADC1.
@@ -121,9 +122,9 @@ private:
 
 	unsigned		_channel_count;
 	adc_msg_s		*_samples;		/**< sample buffer */
-
+#ifndef DISABLE_UORB
 	orb_advert_t		_to_system_power;
-
+#endif
 	/** work trampoline */
 	static void		_tick_trampoline(void *arg);
 
@@ -138,17 +139,20 @@ private:
 	 *				sampling failed.
 	 */
 	uint16_t		_sample(unsigned channel);
-
+#ifndef DISABLE_UORB
 	// update system_power ORB topic, only on FMUv2
 	void update_system_power(void);
+#endif
 };
 
 ADC::ADC(uint32_t channels) :
 	CDev("adc", ADC0_DEVICE_PATH),
 	_sample_perf(perf_alloc(PC_ELAPSED, "adc_samples")),
 	_channel_count(0),
-	_samples(nullptr),
-	_to_system_power(nullptr)
+	_samples(nullptr)
+#ifndef DISABLE_UORB
+	,_to_system_power(nullptr)
+#endif
 {
 	_debug_enabled = true;
 
@@ -307,10 +311,11 @@ ADC::_tick()
 	for (unsigned i = 0; i < _channel_count; i++) {
 		_samples[i].am_data = _sample(_samples[i].am_channel);
 	}
-
+#ifndef DISABLE_UORB
 	update_system_power();
+#endif
 }
-
+#ifndef DISABLE_UORB
 void
 ADC::update_system_power(void)
 {
@@ -393,6 +398,7 @@ ADC::update_system_power(void)
 
 #endif // CONFIG_ARCH_BOARD_PX4FMU_V4
 }
+#endif //DISABLE_UORB
 
 uint16_t
 ADC::_sample(unsigned channel)
