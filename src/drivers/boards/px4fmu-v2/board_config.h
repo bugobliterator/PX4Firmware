@@ -67,7 +67,7 @@ __BEGIN_DECLS
 #define PX4IO_SERIAL_BASE	STM32_USART6_BASE	/* hardwired on the board */
 #define PX4IO_SERIAL_VECTOR	STM32_IRQ_USART6
 #define PX4IO_SERIAL_TX_DMAMAP	DMAMAP_USART6_TX_2
-#define PX4IO_SERIAL_RX_DMAMAP	DMAMAP_USART6_RX_2
+#define PX4IO_SERIAL_RX_DMAMAP	DMAMAP_USART6_RX_1
 #define PX4IO_SERIAL_CLOCK	STM32_PCLK2_FREQUENCY
 #define PX4IO_SERIAL_BITRATE	1500000			/* 1.5Mbps -> max rate for IO */
 
@@ -228,7 +228,7 @@ __BEGIN_DECLS
 #define GPIO_OTGFS_VBUS		(GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|GPIO_OPENDRAIN|GPIO_PORTA|GPIO_PIN9)
 
 /* High-resolution timer */
-#define HRT_TIMER		8	/* use timer8 for the HRT */
+#define HRT_TIMER		5	/* use timer5 for the HRT */
 #define HRT_TIMER_CHANNEL	1	/* use capture/compare channel */
 
 /* PWM input driver. Use FMU AUX5 pins attached to timer4 channel 2 */
@@ -239,11 +239,11 @@ __BEGIN_DECLS
 /* Extra Purpose DMA */
 //Note: Only DMA2 has access to AHB bus meaning GPIO registers are only modifiable by DMA2, 
 //refer DMA section of stm32F4 series User manual for further details.
-#define DMAMAP_BITBANG  STM32_DMA_MAP(DMA2,DMA_STREAM1,DMA_CHAN6)
-#define TIMER_BITBANG   1
+#define DMAMAP_BITBANG  STM32_DMA_MAP(DMA2,DMA_STREAM2,DMA_CHAN7)
+#define TIMER_BITBANG   8
 // Refer manual for DMA Request map to select proper timer channel
 #define TIMER_BITBANG_CH 1
-#define BITBANG_GPIO_REG_BASE STM32_GPIOE_BASE
+#define BITBANG_GPIO_REG_BASE STM32_GPIOD_BASE
 /****************************************************************************************************
  * Public Types
  ****************************************************************************************************/
