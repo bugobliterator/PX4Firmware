@@ -112,7 +112,7 @@
 static DMA_HANDLE	tx_dma;
 
 static void		dma_reset(void);
-volatile static bool dma_bitbang_initialized = false;
+static volatile bool dma_bitbang_initialized = false;
 
 /* GPIO register accessors */
 #define GPIO_REG(_x)		(*(volatile uint32_t *)(BITBANG_GPIO_REG_BASE + _x))
